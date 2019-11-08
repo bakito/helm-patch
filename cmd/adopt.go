@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -72,11 +71,8 @@ func adopt(opts adoptOptions) error {
 		log.Println()
 	}
 
-	cfg := new(action.Configuration)
-	if err := cfg.Init(
-		settings.RESTClientGetter(),
-		settings.Namespace(),
-		os.Getenv("HELM_DRIVER"), debug); err != nil {
+	cfg, err := settings.cfg()
+	if err != nil {
 		return err
 	}
 	install := action.NewInstall(cfg)

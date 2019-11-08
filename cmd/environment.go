@@ -3,9 +3,11 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/spf13/pflag"
 
+	"helm.sh/helm/v3/pkg/action"
 	helmcli "helm.sh/helm/v3/pkg/cli"
 )
 
@@ -18,6 +20,15 @@ func newEnvSettings() *envSettings {
 	envSettings := envSettings{}
 	envSettings.EnvSettings = helmcli.New()
 	return &envSettings
+}
+
+func (s *envSettings) cfg() (*action.Configuration, error) {
+	cfg := new(action.Configuration)
+
+	return cfg, cfg.Init(
+		s.RESTClientGetter(),
+		s.Namespace(),
+		os.Getenv("HELM_DRIVER"), debug)
 }
 
 // AddBaseFlags binds base flags to the given flagset.
