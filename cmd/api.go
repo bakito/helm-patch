@@ -25,13 +25,13 @@ var (
 )
 
 type apiOptions struct {
-	DryRun       bool
-	Kind         string
-	From         string
-	To           string
-	ResourceName string
-	ReleaseName  string
-	Revision     int
+	dryRun       bool
+	kind         string
+	from         string
+	to           string
+	resourceName string
+	releaseName  string
+	revision     int
 }
 
 type resourceInfo struct {
@@ -73,19 +73,19 @@ func newAPICmd(out io.Writer) *cobra.Command {
 func runAPI(cmd *cobra.Command, args []string) error {
 
 	apiOptions := apiOptions{
-		DryRun:       settings.dryRun,
-		Kind:         kind,
-		From:         from,
-		To:           to,
-		ResourceName: name,
-		ReleaseName:  args[0],
-		Revision:     revision,
+		dryRun:       settings.dryRun,
+		kind:         kind,
+		from:         from,
+		to:           to,
+		resourceName: name,
+		releaseName:  args[0],
+		revision:     revision,
 	}
 	return patchAPI(apiOptions)
 }
 
 func patchAPI(opts apiOptions) error {
-	if opts.DryRun {
+	if opts.dryRun {
 		log.Println("NOTE: This is in dry-run mode, the following actions will not be executed.")
 		log.Println("Run without --dry-run to take the actions described below:")
 		log.Println()
@@ -132,7 +132,7 @@ func patchAPI(opts apiOptions) error {
 	}
 
 	if changed {
-		if !opts.DryRun {
+		if !opts.dryRun {
 			err = saveResource(manifests, rel, cfg)
 			if err != nil {
 				return err
@@ -159,9 +159,9 @@ func saveResource(manifests map[string]string, rel *release.Release, cfg *action
 }
 
 func patchManifest(opts apiOptions, resource map[string]interface{}, i *resourceInfo) (string, error) {
-	resource["apiVersion"] = opts.To
-	log.Printf("Patching kind: %s name: %s from apiVersion: %s to apiVersion: %s\n", i.kind, i.name, i.apiVersion, opts.To)
-	if !opts.DryRun {
+	resource["apiVersion"] = opts.to
+	log.Printf("Patching kind: %s name: %s from apiVersion: %s to apiVersion: %s\n", i.kind, i.name, i.apiVersion, opts.to)
+	if !opts.dryRun {
 		m, err := yaml.Marshal(resource)
 		if err == nil {
 			return string(m), nil
@@ -172,12 +172,12 @@ func patchManifest(opts apiOptions, resource map[string]interface{}, i *resource
 
 func info(opts apiOptions, resource map[string]interface{}) *resourceInfo {
 	k, ok := resource["kind"]
-	if !ok || k != opts.Kind {
+	if !ok || k != opts.kind {
 		return nil
 	}
 
 	version, ok := resource["apiVersion"]
-	if !ok || (version != opts.From && opts.From != "") {
+	if !ok || (version != opts.from && opts.from != "") {
 		return nil
 	}
 
@@ -187,7 +187,7 @@ func info(opts apiOptions, resource map[string]interface{}) *resourceInfo {
 	}
 
 	name, ok := metadata.(map[interface{}]interface{})["name"]
-	if !ok || (name != opts.ResourceName && opts.ResourceName != "") {
+	if !ok || (name != opts.resourceName && opts.resourceName != "") {
 		return nil
 	}
 
@@ -199,12 +199,12 @@ func info(opts apiOptions, resource map[string]interface{}) *resourceInfo {
 }
 
 func (opts *apiOptions) filter(rel *release.Release) bool {
-	if rel == nil || rel.Name == "" || rel.Name != opts.ReleaseName {
+	if rel == nil || rel.Name == "" || rel.Name != opts.releaseName {
 		return false
 	}
 
-	if opts.Revision > 0 {
-		return rel.Version == opts.Revision
+	if opts.revision > 0 {
+		return rel.Version == opts.revision
 	}
 	return true
 }
