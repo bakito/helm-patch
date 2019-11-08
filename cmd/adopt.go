@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -13,6 +14,7 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/release"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/resource"
 )
 
@@ -37,7 +39,7 @@ func newAdoptCmd(out io.Writer) *cobra.Command {
 			return nil
 		},
 
-		RunE: runAPI,
+		RunE: runAdopt,
 	}
 
 	flags := cmd.Flags()
@@ -69,7 +71,12 @@ func adopt(opts adoptOptions) error {
 	}
 
 	cfg := new(action.Configuration)
-
+	if err := cfg.Init(
+		settings.RESTClientGetter(),
+		settings.Namespace(),
+		os.Getenv("HELM_DRIVER"), debug); err != nil {
+		return err
+	}
 	install := action.NewInstall(cfg)
 
 	name, chartName, err := install.NameAndChart(opts.args)
@@ -137,8 +144,8 @@ func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, error)
 		if err != nil {
 			return "", err
 		}
-
-		m, err := yaml.Marshal(object)
+		us := object.(*unstructured.Unstructured)
+		m, err := yaml.Marshal(us.Object)
 		if err != nil {
 			return "", err
 		}
