@@ -6,6 +6,7 @@ import (
 	. "gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	"helm.sh/helm/v3/pkg/release"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var infoDataset = []struct {
@@ -40,32 +41,36 @@ var infoDataset = []struct {
 	},
 	{
 		apiOptions{kind: "Foo", from: "v1"},
-		map[string]interface{}{"kind": "Foo", "apiVersion": "v1", "metadata": map[interface{}]interface{}{}},
+		map[string]interface{}{"kind": "Foo", "apiVersion": "v1", "metadata": map[string]interface{}{}},
 		nil,
 	},
 	{
 		apiOptions{kind: "Foo", from: "v1"},
-		map[string]interface{}{"kind": "Foo", "apiVersion": "v1", "metadata": map[interface{}]interface{}{"name": "abc"}},
+		map[string]interface{}{"kind": "Foo", "apiVersion": "v1", "metadata": map[string]interface{}{"name": "abc"}},
 		&resourceInfo{apiVersion: "v1", kind: "Foo", name: "abc"},
 	},
 	{
 		apiOptions{kind: "Foo", from: "v1", resourceName: "xyz"},
-		map[string]interface{}{"kind": "Foo", "apiVersion": "v1", "metadata": map[interface{}]interface{}{"name": "abc"}},
+		map[string]interface{}{"kind": "Foo", "apiVersion": "v1", "metadata": map[string]interface{}{"name": "abc"}},
 		nil,
 	},
 }
 
 func Test_info(t *testing.T) {
 	for i, ds := range infoDataset {
-		ri := info(ds.opts, ds.resource)
+		us := &unstructured.Unstructured{
+			Object: ds.resource,
+		}
+
+		ri := info(ds.opts, us)
 		if ds.expected == nil {
-			Assert(t, is.Nil(ds.expected), "InfoDataset #%v: %v", i, ds)
+			Assert(t, is.Nil(ri), "InfoDataset #%v: %v", i, ds)
 		} else {
+			Assert(t, ri != nil, "InfoDataset #%v: %v", i, ds)
 			Assert(t, is.Equal(ds.expected.apiVersion, ri.apiVersion), "InfoDataset #%v: %v", i, ds)
 			Assert(t, is.Equal(ds.expected.kind, ri.kind), "InfoDataset #%v: %v", i, ds)
 			Assert(t, is.Equal(ds.expected.name, ri.name), "InfoDataset #%v: %v", i, ds)
 		}
-
 	}
 }
 
