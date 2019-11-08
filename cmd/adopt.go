@@ -14,7 +14,9 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/release"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/resource"
 )
 
@@ -115,10 +117,13 @@ func adopt(opts adoptOptions) error {
 	if err != nil {
 		return err
 	}
-	rel.Manifest = manifest
-	rel.SetStatus(release.StatusDeployed, "Adoption complete")
-	cfg.Releases.Create(rel)
-
+	if opts.dryRun {
+		log.Printf("%s\n", manifest)
+	} else {
+		rel.Manifest = manifest
+		rel.SetStatus(release.StatusDeployed, "Adoption complete")
+		cfg.Releases.Create(rel)
+	}
 	// TODO checks existing charts
 
 	return nil
@@ -152,10 +157,18 @@ func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, error)
 
 		content := string(m)
 
-		if strings.TrimSpace(content) == "" {
-			continue
+		if strings.TrimSpace(content) != "" {
+
+			src := name
+
+			if ro, ok := object.(runtime.Object); ok {
+				if meta, ok := object.(metav1.Object); ok {
+					src = ro.GetObjectKind().GroupVersionKind().Kind + "/" + meta.GetName()
+				}
+			}
+
+			fmt.Fprintf(b, "---\n# Exported form: %s\n%s\n", src, content)
 		}
-		fmt.Fprintf(b, "---\n# Source: %s\n%s\n", name, content)
 	}
 
 	return b.String(), nil
