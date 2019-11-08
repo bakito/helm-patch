@@ -10,10 +10,13 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/releaseutil"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -114,13 +117,18 @@ func patchAPI(opts apiOptions) error {
 
 	changed := false
 	manifests := releaseutil.SplitManifests(rel.Manifest)
+
 	for name, data := range manifests {
 		resource := make(map[string]interface{})
 		if err := yaml.Unmarshal([]byte(data), &resource); err != nil {
 			return err
 		}
 
-		if i := info(opts, resource); i != nil {
+		us := &unstructured.Unstructured{
+			Object: resource,
+		}
+
+		if i := info(opts, us); i != nil {
 			p, err := patchManifest(opts, resource, i)
 			if err != nil {
 				return err
@@ -161,40 +169,43 @@ func saveResource(manifests map[string]string, rel *release.Release, cfg *action
 func patchManifest(opts apiOptions, resource map[string]interface{}, i *resourceInfo) (string, error) {
 	resource["apiVersion"] = opts.to
 	log.Printf("Patching kind: %s name: %s from apiVersion: %s to apiVersion: %s\n", i.kind, i.name, i.apiVersion, opts.to)
-	if !opts.dryRun {
-		m, err := yaml.Marshal(resource)
-		if err == nil {
-			return string(m), nil
-		}
+
+	m, err := yaml.Marshal(resource)
+	if err == nil {
+		return string(m), nil
 	}
 	return "", nil
 }
 
-func info(opts apiOptions, resource map[string]interface{}) *resourceInfo {
-	k, ok := resource["kind"]
-	if !ok || k != opts.kind {
+func info(opts apiOptions, resource interface{}) *resourceInfo {
+	ro, ok := resource.(runtime.Object)
+	if !ok {
 		return nil
 	}
-
-	version, ok := resource["apiVersion"]
-	if !ok || (version != opts.from && opts.from != "") {
-		return nil
-	}
-
-	metadata, ok := resource["metadata"]
+	meta, ok := resource.(metav1.Object)
 	if !ok {
 		return nil
 	}
 
-	name, ok := metadata.(map[interface{}]interface{})["name"]
-	if !ok || (name != opts.resourceName && opts.resourceName != "") {
+	name := meta.GetName()
+	if name == "" || (name != opts.resourceName && opts.resourceName != "") {
+		return nil
+	}
+
+	k := ro.GetObjectKind().GroupVersionKind().Kind
+	if k == "" || k != opts.kind {
+		return nil
+	}
+
+	version := ro.GetObjectKind().GroupVersionKind().GroupVersion().String()
+	if version == "" || (version != opts.from && opts.from != "") {
 		return nil
 	}
 
 	return &resourceInfo{
-		kind:       k.(string),
-		apiVersion: version.(string),
-		name:       name.(string),
+		kind:       k,
+		apiVersion: version,
+		name:       name,
 	}
 }
 

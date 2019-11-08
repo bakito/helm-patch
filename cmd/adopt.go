@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/release"
@@ -18,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/resource"
+	"sigs.k8s.io/yaml"
 )
 
 var (
@@ -162,7 +162,7 @@ func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, error)
 			src := name
 
 			if ro, ok := object.(runtime.Object); ok {
-				if meta, ok := object.(metav1.Object); ok {
+				if meta, ok2 := object.(metav1.Object); ok2 {
 					src = ro.GetObjectKind().GroupVersionKind().Kind + "/" + meta.GetName()
 				}
 			}
