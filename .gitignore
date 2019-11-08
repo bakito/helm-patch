@@ -1,0 +1,4 @@
+helm-patch*
+.vscode
+*debug*
+coverage.out

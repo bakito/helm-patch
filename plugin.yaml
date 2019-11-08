@@ -1,0 +1,8 @@
+name: "patch"
+version: "0.1.9"
+usage: "Patch helm 3 releases"
+description: "Patch helm 3 releases"
+command: "$HELM_PLUGIN_DIR/bin/patch"
+hooks:
+  install: "cd $HELM_PLUGIN_DIR; scripts/install_plugin.sh"
+  update: "cd $HELM_PLUGIN_DIR; scripts/install_plugin.sh"
