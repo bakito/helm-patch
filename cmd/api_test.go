@@ -14,42 +14,42 @@ var infoDataset = []struct {
 	expected *resourceInfo
 }{
 	{
-		apiOptions{Kind: "Bar"},
+		apiOptions{kind: "Bar"},
 		map[string]interface{}{"kind": "Foo"},
 		nil,
 	},
 	{
-		apiOptions{Kind: "Foo"},
+		apiOptions{kind: "Foo"},
 		map[string]interface{}{"kind": "Foo"},
 		nil,
 	},
 	{
-		apiOptions{Kind: "Foo", From: ""},
+		apiOptions{kind: "Foo", from: ""},
 		map[string]interface{}{"kind": "Foo", "apiVersion": "v1"},
 		nil,
 	},
 	{
-		apiOptions{Kind: "Foo", From: "v1"},
+		apiOptions{kind: "Foo", from: "v1"},
 		map[string]interface{}{"kind": "Foo", "apiVersion": "v1"},
 		nil,
 	},
 	{
-		apiOptions{Kind: "Foo", From: "v2"},
+		apiOptions{kind: "Foo", from: "v2"},
 		map[string]interface{}{"kind": "Foo", "apiVersion": "v1"},
 		nil,
 	},
 	{
-		apiOptions{Kind: "Foo", From: "v1"},
+		apiOptions{kind: "Foo", from: "v1"},
 		map[string]interface{}{"kind": "Foo", "apiVersion": "v1", "metadata": map[interface{}]interface{}{}},
 		nil,
 	},
 	{
-		apiOptions{Kind: "Foo", From: "v1"},
+		apiOptions{kind: "Foo", from: "v1"},
 		map[string]interface{}{"kind": "Foo", "apiVersion": "v1", "metadata": map[interface{}]interface{}{"name": "abc"}},
 		&resourceInfo{apiVersion: "v1", kind: "Foo", name: "abc"},
 	},
 	{
-		apiOptions{Kind: "Foo", From: "v1", ResourceName: "xyz"},
+		apiOptions{kind: "Foo", from: "v1", resourceName: "xyz"},
 		map[string]interface{}{"kind": "Foo", "apiVersion": "v1", "metadata": map[interface{}]interface{}{"name": "abc"}},
 		nil,
 	},
@@ -79,22 +79,22 @@ var filterDataset = []struct {
 		&release.Release{},
 		false,
 	}, {
-		apiOptions{ReleaseName: "abc"},
+		apiOptions{releaseName: "abc"},
 		&release.Release{Name: "abc"},
 		true,
 	},
 	{
-		apiOptions{ReleaseName: "abc"},
+		apiOptions{releaseName: "abc"},
 		&release.Release{Name: "xyz"},
 		false,
 	},
 	{
-		apiOptions{ReleaseName: "abc", Revision: 1},
+		apiOptions{releaseName: "abc", revision: 1},
 		&release.Release{Name: "abc", Version: 1},
 		true,
 	},
 	{
-		apiOptions{ReleaseName: "abc", Revision: 1},
+		apiOptions{releaseName: "abc", revision: 1},
 		&release.Release{Name: "abc", Version: 2},
 		false,
 	},
