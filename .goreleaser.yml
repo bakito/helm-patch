@@ -1,0 +1,41 @@
+# This is an example goreleaser.yaml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+    # you may remove this if you don't use vgo
+    - go mod download
+
+builds:
+- binary: bin/patch
+  env:
+  - CGO_ENABLED=0
+  ldflags:
+    - -s -w -X github.com/bakito/helm-patch/cmd.version={{.Version}}
+  goos:
+    - linux
+    - windows
+    - darwin
+  goarch:
+    - 386
+    - amd64
+    - arm
+    - arm64
+  hooks:
+    post: ./.goreleaser/upx.sh
+
+archive:
+  format: tar.gz
+  files:
+    - plugin.yaml
+    - LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'

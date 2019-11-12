@@ -11,15 +11,15 @@ echo "Downloading and installing helm-patch v${version} ..."
 
 url=""
 if [ "$(uname)" = "Darwin" ]; then
-    url="https://github.com/helm/helm-patch/releases/download/v${version}/helm-patch_${version}_darwin_amd64.tar.gz"
+    url="https://github.com/bakito/helm-patch/releases/download/v${version}/helm-patch_${version}_darwin_amd64.tar.gz"
 elif [ "$(uname)" = "Linux" ] ; then
     if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
-        url="https://github.com/helm/helm-patch/releases/download/v${version}/helm-patch_${version}_linux_arm64.tar.gz"
+        url="https://github.com/bakito/helm-patch/releases/download/v${version}/helm-patch_${version}_linux_arm64.tar.gz"
     else
-        url="https://github.com/helm/helm-patch/releases/download/v${version}/helm-patch_${version}_linux_amd64.tar.gz"
+        url="https://github.com/bakito/helm-patch/releases/download/v${version}/helm-patch_${version}_linux_amd64.tar.gz"
     fi
 else
-    url="https://github.com/helm/helm-patch/releases/download/v${version}/helm-patch_${version}_windows_amd64.tar.gz"
+    url="https://github.com/bakito/helm-patch/releases/download/v${version}/helm-patch_${version}_windows_amd64.tar.gz"
 fi
 
 echo "$url"
@@ -35,5 +35,5 @@ else
     wget -q "${url}" -O "releases/v${version}.tar.gz"
 fi
 tar xzf "releases/v${version}.tar.gz" -C "releases/v${version}"
-mv "releases/v${version}/patch" "bin/patch" || \
-    mv "releases/v${version}/patch.exe" "bin/patch"
+mv "releases/v${version}/bin/patch" "bin/patch" || \
+    mv "releases/v${version}/bin/patch.exe" "bin/patch"

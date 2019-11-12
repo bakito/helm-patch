@@ -8,12 +8,14 @@ import (
 )
 
 var (
+	version  string
 	settings *envSettings
 )
 
 // NewRootCmd create a new root command
 func NewRootCmd(out io.Writer, args []string) *cobra.Command {
 	cmd := &cobra.Command{
+		Version:      version,
 		Use:          "patch",
 		Short:        "Patch helm 3 releases",
 		Long:         "Patch helm 3 releases",
