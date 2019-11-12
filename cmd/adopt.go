@@ -31,7 +31,7 @@ type adoptOptions struct {
 
 func newAdoptCmd(out io.Writer) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "adopt [flags] RELEASE",
+		Use:   "adopt [flags] [RELEASE] [CHART]",
 		Short: "path the api version of a resource",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 2 {
