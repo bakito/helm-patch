@@ -134,7 +134,7 @@ func adopt(opts adoptOptions) error {
 			}
 
 			if _, ok := resourceNames[resource.KindName()]; ok {
-				return fmt.Errorf("The resource is already contained within the chart with name: '%s' and version: %v", res.Name, res.Version)
+				return fmt.Errorf("The resource '%v' is already contained within the chart: '%s', name: '%s', version: %v", resource.KindName(), res.Chart, res.Name, res.Version)
 			}
 		}
 	}
