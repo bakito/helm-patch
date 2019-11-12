@@ -23,8 +23,8 @@ builds:
   hooks:
     post: ./.goreleaser/upx.sh
 
-archive:
-  format: tar.gz
+archives:
+- format: tar.gz
   files:
     - plugin.yaml
     - LICENSE
