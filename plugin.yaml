@@ -1,5 +1,5 @@
 name: "patch"
-version: "0.0.1"
+version: "0.0.2"
 usage: "Patch helm 3 releases"
 description: "Patch helm 3 releases"
 command: "$HELM_PLUGIN_DIR/bin/patch"
