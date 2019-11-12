@@ -8,13 +8,11 @@ import (
 	"log"
 	"strings"
 
+	"github.com/bakito/helm-patch/pkg/types"
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/releaseutil"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
 
@@ -34,12 +32,6 @@ type apiOptions struct {
 	resourceName string
 	releaseName  string
 	revision     int
-}
-
-type resourceInfo struct {
-	apiVersion string
-	kind       string
-	name       string
 }
 
 func newAPICmd(out io.Writer) *cobra.Command {
@@ -119,11 +111,7 @@ func patchAPI(opts apiOptions) error {
 			return err
 		}
 
-		us := &unstructured.Unstructured{
-			Object: resource,
-		}
-
-		if i := info(opts, us); i != nil {
+		if i := info(opts, resource); i != nil {
 			p, err := patchManifest(opts, resource, i)
 			if err != nil {
 				return err
@@ -161,9 +149,9 @@ func saveResource(manifests map[string]string, rel *release.Release, cfg *action
 	return cfg.Releases.Update(rel)
 }
 
-func patchManifest(opts apiOptions, resource map[string]interface{}, i *resourceInfo) (string, error) {
+func patchManifest(opts apiOptions, resource map[string]interface{}, r types.Resource) (string, error) {
 	resource["apiVersion"] = opts.to
-	log.Printf("Patching kind: %s name: %s from apiVersion: %s to apiVersion: %s\n", i.kind, i.name, i.apiVersion, opts.to)
+	log.Printf("Patching kind: %s name: %s from apiVersion: %s to apiVersion: %s\n", r.Kind(), r.Name(), r.GroupVersion(), opts.to)
 
 	m, err := yaml.Marshal(resource)
 	if err == nil {
@@ -172,36 +160,28 @@ func patchManifest(opts apiOptions, resource map[string]interface{}, i *resource
 	return "", nil
 }
 
-func info(opts apiOptions, resource interface{}) *resourceInfo {
-	ro, ok := resource.(runtime.Object)
-	if !ok {
-		return nil
-	}
-	meta, ok := resource.(metav1.Object)
-	if !ok {
+func info(opts apiOptions, yaml map[string]interface{}) types.Resource {
+	resource := types.ToResource(yaml)
+	if resource == nil {
 		return nil
 	}
 
-	name := meta.GetName()
+	name := resource.Name()
 	if name == "" || (name != opts.resourceName && opts.resourceName != "") {
 		return nil
 	}
 
-	k := ro.GetObjectKind().GroupVersionKind().Kind
+	k := resource.Kind()
 	if k == "" || k != opts.kind {
 		return nil
 	}
 
-	version := ro.GetObjectKind().GroupVersionKind().GroupVersion().String()
+	version := resource.GroupVersion()
 	if version == "" || (version != opts.from && opts.from != "") {
 		return nil
 	}
 
-	return &resourceInfo{
-		kind:       k,
-		apiVersion: version,
-		name:       name,
-	}
+	return resource
 }
 
 func (opts *apiOptions) filter(rel *release.Release) bool {

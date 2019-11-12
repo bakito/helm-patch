@@ -8,13 +8,14 @@ import (
 	"log"
 	"strings"
 
+	"github.com/bakito/helm-patch/pkg/types"
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v3/pkg/releaseutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/resource"
 	"sigs.k8s.io/yaml"
 )
@@ -32,7 +33,7 @@ type adoptOptions struct {
 func newAdoptCmd(out io.Writer) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "adopt [flags] [RELEASE] [CHART]",
-		Short: "path the api version of a resource",
+		Short: "adopt existing resources into a chart",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 2 {
 				return errors.New("name of release and the chart has to be defined")
@@ -88,8 +89,6 @@ func adopt(opts adoptOptions) error {
 		return err
 	}
 
-	debug("CHART PATH: %s\n", cp)
-
 	chrt, err := loader.Load(cp)
 	if err != nil {
 		return err
@@ -109,10 +108,38 @@ func adopt(opts adoptOptions) error {
 		Version: 1,
 	}
 
-	manifest, err := buildManifest(opts, cfg)
+	manifest, resourceNames, err := buildManifest(opts, cfg)
 	if err != nil {
 		return err
 	}
+
+	list := action.NewList(cfg)
+	results, err := list.Run()
+	if err != nil {
+		return err
+	}
+
+	for _, res := range results {
+		manifests := releaseutil.SplitManifests(res.Manifest)
+
+		for _, data := range manifests {
+			resYaml := make(map[string]interface{})
+			if err := yaml.Unmarshal([]byte(data), &resYaml); err != nil {
+				return err
+			}
+
+			resource := types.ToResource(resYaml)
+			if resource == nil {
+				return nil
+			}
+
+			if _, ok := resourceNames[resource.KindName()]; ok {
+				return fmt.Errorf("The resource '%s' is already contained within the chart: '%s-%s', name: '%s', version: %v",
+					resource.KindName(), res.Chart.Name(), res.Chart.Metadata.Version, res.Name, res.Version)
+			}
+		}
+	}
+
 	if opts.dryRun {
 		log.Printf("%s\n", manifest)
 	} else {
@@ -120,13 +147,14 @@ func adopt(opts adoptOptions) error {
 		rel.SetStatus(release.StatusDeployed, "Adoption complete")
 		cfg.Releases.Create(rel)
 	}
-	// TODO checks existing charts
 
 	return nil
 }
 
-func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, error) {
+func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, map[string]bool, error) {
 	b := bytes.NewBuffer(nil)
+
+	resourceNames := make(map[string]bool)
 
 	for _, name := range opts.resourceNames {
 
@@ -139,16 +167,16 @@ func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, error)
 			ResourceTypeOrNameArgs(true, name).
 			Do()
 		if result.Err() != nil {
-			return "", result.Err()
+			return "", resourceNames, result.Err()
 		}
 		object, err := result.Object()
 		if err != nil {
-			return "", err
+			return "", resourceNames, err
 		}
 		us := object.(*unstructured.Unstructured)
 		m, err := yaml.Marshal(us.Object)
 		if err != nil {
-			return "", err
+			return "", resourceNames, err
 		}
 
 		content := string(m)
@@ -157,15 +185,14 @@ func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, error)
 
 			src := name
 
-			if ro, ok := object.(runtime.Object); ok {
-				if meta, ok2 := object.(metav1.Object); ok2 {
-					src = ro.GetObjectKind().GroupVersionKind().Kind + "/" + meta.GetName()
-				}
+			if meta, ok2 := object.(metav1.Object); ok2 {
+				src = object.GetObjectKind().GroupVersionKind().Kind + "/" + meta.GetName()
+				resourceNames[object.GetObjectKind().GroupVersionKind().Kind+"/"+meta.GetName()] = true
 			}
 
 			fmt.Fprintf(b, "---\n# Exported form: %s\n%s\n", src, content)
 		}
 	}
 
-	return b.String(), nil
+	return b.String(), resourceNames, nil
 }
