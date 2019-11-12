@@ -6,7 +6,6 @@ import (
 	. "gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	"helm.sh/helm/v3/pkg/release"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var infoDataset = []struct {
@@ -58,18 +57,15 @@ var infoDataset = []struct {
 
 func Test_info(t *testing.T) {
 	for i, ds := range infoDataset {
-		us := &unstructured.Unstructured{
-			Object: ds.resource,
-		}
 
-		ri := info(ds.opts, us)
+		ri := info(ds.opts, ds.resource)
 		if ds.expected == nil {
 			Assert(t, is.Nil(ri), "InfoDataset #%v: %v", i, ds)
 		} else {
 			Assert(t, ri != nil, "InfoDataset #%v: %v", i, ds)
-			Assert(t, is.Equal(ds.expected.apiVersion, ri.apiVersion), "InfoDataset #%v: %v", i, ds)
-			Assert(t, is.Equal(ds.expected.kind, ri.kind), "InfoDataset #%v: %v", i, ds)
-			Assert(t, is.Equal(ds.expected.name, ri.name), "InfoDataset #%v: %v", i, ds)
+			Assert(t, is.Equal(ds.expected.apiVersion, ri.GroupVersion()), "InfoDataset #%v: %v", i, ds)
+			Assert(t, is.Equal(ds.expected.kind, ri.Kind()), "InfoDataset #%v: %v", i, ds)
+			Assert(t, is.Equal(ds.expected.name, ri.Name()), "InfoDataset #%v: %v", i, ds)
 		}
 	}
 }
@@ -110,4 +106,10 @@ func Test_filter(t *testing.T) {
 		match := ds.opts.filter(ds.release)
 		Assert(t, is.Equal(ds.expected, match), "FilterDataset #%v: %v", i, ds)
 	}
+}
+
+type resourceInfo struct {
+	apiVersion string
+	kind       string
+	name       string
 }

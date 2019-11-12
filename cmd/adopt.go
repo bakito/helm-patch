@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/bakito/helm-patch/pkg/types"
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -15,7 +16,6 @@ import (
 	"helm.sh/helm/v3/pkg/releaseutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/resource"
 	"sigs.k8s.io/yaml"
 )
@@ -122,27 +122,21 @@ func adopt(opts adoptOptions) error {
 	for _, res := range results {
 		manifests := releaseutil.SplitManifests(res.Manifest)
 
-		for name, data := range manifests {
-			resource := make(map[string]interface{})
-			if err := yaml.Unmarshal([]byte(data), &resource); err != nil {
+		for _, data := range manifests {
+			resYaml := make(map[string]interface{})
+			if err := yaml.Unmarshal([]byte(data), &resYaml); err != nil {
 				return err
 			}
 
-			var us interface{} = &unstructured.Unstructured{
-				Object: resource,
-			}
-
-			ro, ok := us.(runtime.Object)
-			if !ok {
-				return nil
-			}
-			meta, ok := us.(metav1.Object)
-			if !ok {
+			resource := types.ToResource(resYaml)
+			if resource == nil {
 				return nil
 			}
 
+			if _, ok := resourceNames[resource.KindName()]; ok {
+				return fmt.Errorf("The resource is already contained within the chart with name: '%s' and version: %v", res.Name, res.Version)
+			}
 		}
-
 	}
 
 	if opts.dryRun {
@@ -152,7 +146,6 @@ func adopt(opts adoptOptions) error {
 		rel.SetStatus(release.StatusDeployed, "Adoption complete")
 		cfg.Releases.Create(rel)
 	}
-	// TODO checks existing charts
 
 	return nil
 }
@@ -191,11 +184,9 @@ func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, map[st
 
 			src := name
 
-			if ro, ok := object.(runtime.Object); ok {
-				if meta, ok2 := object.(metav1.Object); ok2 {
-					src = ro.GetObjectKind().GroupVersionKind().Kind + "/" + meta.GetName()
-					resourceNames[ro.GetObjectKind().GroupVersionKind().Kind+"/"+meta.GetName()] = true
-				}
+			if meta, ok2 := object.(metav1.Object); ok2 {
+				src = object.GetObjectKind().GroupVersionKind().Kind + "/" + meta.GetName()
+				resourceNames[object.GetObjectKind().GroupVersionKind().Kind+"/"+meta.GetName()] = true
 			}
 
 			fmt.Fprintf(b, "---\n# Exported form: %s\n%s\n", src, content)
