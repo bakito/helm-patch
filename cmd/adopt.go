@@ -12,6 +12,7 @@ import (
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v3/pkg/releaseutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,7 +33,7 @@ type adoptOptions struct {
 func newAdoptCmd(out io.Writer) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "adopt [flags] [RELEASE] [CHART]",
-		Short: "path the api version of a resource",
+		Short: "adopt existing resources into a chart",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 2 {
 				return errors.New("name of release and the chart has to be defined")
@@ -88,8 +89,6 @@ func adopt(opts adoptOptions) error {
 		return err
 	}
 
-	debug("CHART PATH: %s\n", cp)
-
 	chrt, err := loader.Load(cp)
 	if err != nil {
 		return err
@@ -109,10 +108,43 @@ func adopt(opts adoptOptions) error {
 		Version: 1,
 	}
 
-	manifest, err := buildManifest(opts, cfg)
+	manifest, resourceNames, err := buildManifest(opts, cfg)
 	if err != nil {
 		return err
 	}
+
+	list := action.NewList(cfg)
+	results, err := list.Run()
+	if err != nil {
+		return err
+	}
+
+	for _, res := range results {
+		manifests := releaseutil.SplitManifests(res.Manifest)
+
+		for name, data := range manifests {
+			resource := make(map[string]interface{})
+			if err := yaml.Unmarshal([]byte(data), &resource); err != nil {
+				return err
+			}
+
+			var us interface{} = &unstructured.Unstructured{
+				Object: resource,
+			}
+
+			ro, ok := us.(runtime.Object)
+			if !ok {
+				return nil
+			}
+			meta, ok := us.(metav1.Object)
+			if !ok {
+				return nil
+			}
+
+		}
+
+	}
+
 	if opts.dryRun {
 		log.Printf("%s\n", manifest)
 	} else {
@@ -125,8 +157,10 @@ func adopt(opts adoptOptions) error {
 	return nil
 }
 
-func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, error) {
+func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, map[string]bool, error) {
 	b := bytes.NewBuffer(nil)
+
+	resourceNames := make(map[string]bool)
 
 	for _, name := range opts.resourceNames {
 
@@ -139,16 +173,16 @@ func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, error)
 			ResourceTypeOrNameArgs(true, name).
 			Do()
 		if result.Err() != nil {
-			return "", result.Err()
+			return "", resourceNames, result.Err()
 		}
 		object, err := result.Object()
 		if err != nil {
-			return "", err
+			return "", resourceNames, err
 		}
 		us := object.(*unstructured.Unstructured)
 		m, err := yaml.Marshal(us.Object)
 		if err != nil {
-			return "", err
+			return "", resourceNames, err
 		}
 
 		content := string(m)
@@ -160,6 +194,7 @@ func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, error)
 			if ro, ok := object.(runtime.Object); ok {
 				if meta, ok2 := object.(metav1.Object); ok2 {
 					src = ro.GetObjectKind().GroupVersionKind().Kind + "/" + meta.GetName()
+					resourceNames[ro.GetObjectKind().GroupVersionKind().Kind+"/"+meta.GetName()] = true
 				}
 			}
 
@@ -167,5 +202,5 @@ func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, error)
 		}
 	}
 
-	return b.String(), nil
+	return b.String(), resourceNames, nil
 }
