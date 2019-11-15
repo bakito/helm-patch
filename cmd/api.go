@@ -150,8 +150,8 @@ func saveResource(manifests map[string]string, rel *release.Release, cfg *action
 }
 
 func patchManifest(opts apiOptions, resource map[string]interface{}, r types.Resource) (string, error) {
+	log.Printf("Patching kind: %s name: %s from apiVersion: %s to apiVersion: %s\n", r.Kind(), r.Name(), opts.from, opts.to)
 	resource["apiVersion"] = opts.to
-	log.Printf("Patching kind: %s name: %s from apiVersion: %s to apiVersion: %s\n", r.Kind(), r.Name(), r.GroupVersion(), opts.to)
 
 	m, err := yaml.Marshal(resource)
 	if err == nil {
