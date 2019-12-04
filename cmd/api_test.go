@@ -3,6 +3,7 @@ package cmd
 import (
 	"testing"
 
+	"github.com/bakito/helm-patch/pkg/types"
 	. "gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	"helm.sh/helm/v3/pkg/release"
@@ -55,10 +56,10 @@ var infoDataset = []struct {
 	},
 }
 
-func Test_info(t *testing.T) {
+func Test_apiInfo(t *testing.T) {
 	for i, ds := range infoDataset {
 
-		ri := info(ds.opts, ds.resource)
+		ri := apiInfo(ds.opts, ds.resource)
 		if ds.expected == nil {
 			Assert(t, is.Nil(ri), "InfoDataset #%v: %v", i, ds)
 		} else {
@@ -80,22 +81,22 @@ var filterDataset = []struct {
 		&release.Release{},
 		false,
 	}, {
-		apiOptions{releaseName: "abc"},
+		apiOptions{Options: types.Options{ReleaseName: "abc"}},
 		&release.Release{Name: "abc"},
 		true,
 	},
 	{
-		apiOptions{releaseName: "abc"},
+		apiOptions{Options: types.Options{ReleaseName: "abc"}},
 		&release.Release{Name: "xyz"},
 		false,
 	},
 	{
-		apiOptions{releaseName: "abc", revision: 1},
+		apiOptions{Options: types.Options{ReleaseName: "abc", Revision: 1}},
 		&release.Release{Name: "abc", Version: 1},
 		true,
 	},
 	{
-		apiOptions{releaseName: "abc", revision: 1},
+		apiOptions{Options: types.Options{ReleaseName: "abc", Revision: 1}},
 		&release.Release{Name: "abc", Version: 2},
 		false,
 	},
@@ -103,7 +104,8 @@ var filterDataset = []struct {
 
 func Test_filter(t *testing.T) {
 	for i, ds := range filterDataset {
-		match := ds.opts.filter(ds.release)
+		f := ds.opts.Filter()
+		match := f(ds.release)
 		Assert(t, is.Equal(ds.expected, match), "FilterDataset #%v: %v", i, ds)
 	}
 }
