@@ -24,8 +24,8 @@ var (
 	resourceNames []string
 )
 
-type adoptOptions struct {
-	dryRun        bool
+type resourceNameOptions struct {
+	types.Options
 	resourceNames []string
 	args          []string
 }
@@ -47,9 +47,9 @@ func newAdoptCmd(out io.Writer) *cobra.Command {
 	flags := cmd.Flags()
 	settings.AddFlags(flags)
 
-	flags.StringArrayVar(&resourceNames, "names", []string{}, "the names of the recources to adopt")
+	flags.StringArrayVar(&resourceNames, "name", []string{}, "the name(s) of the recources to adopt")
 
-	cmd.MarkFlagRequired("names")
+	cmd.MarkFlagRequired("name")
 
 	return cmd
 
@@ -57,16 +57,18 @@ func newAdoptCmd(out io.Writer) *cobra.Command {
 
 func runAdopt(cmd *cobra.Command, args []string) error {
 
-	adoptOptions := adoptOptions{
-		dryRun:        settings.dryRun,
+	opts := resourceNameOptions{
+		Options: types.Options{
+			DryRun:      settings.dryRun,
+			ReleaseName: args[0],
+		},
 		resourceNames: resourceNames,
-		args:          args,
 	}
-	return adopt(adoptOptions)
+	return adopt(opts)
 }
 
-func adopt(opts adoptOptions) error {
-	if opts.dryRun {
+func adopt(opts resourceNameOptions) error {
+	if opts.DryRun {
 		log.Println("NOTE: This is in dry-run mode, the following actions will not be executed.")
 		log.Println("Run without --dry-run to take the actions described below:")
 		log.Println()
@@ -78,7 +80,7 @@ func adopt(opts adoptOptions) error {
 	}
 	install := action.NewInstall(cfg)
 
-	name, chartName, err := install.NameAndChart(opts.args)
+	name, chartName, err := install.NameAndChart([]string{opts.ReleaseName})
 	if err != nil {
 		return err
 	}
@@ -140,7 +142,7 @@ func adopt(opts adoptOptions) error {
 		}
 	}
 
-	if opts.dryRun {
+	if opts.DryRun {
 		log.Printf("%s\n", manifest)
 	} else {
 		rel.Manifest = manifest
@@ -151,7 +153,7 @@ func adopt(opts adoptOptions) error {
 	return nil
 }
 
-func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, map[string]bool, error) {
+func buildManifest(opts resourceNameOptions, cfg *action.Configuration) (string, map[string]bool, error) {
 	b := bytes.NewBuffer(nil)
 
 	resourceNames := make(map[string]bool)

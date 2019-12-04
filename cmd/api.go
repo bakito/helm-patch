@@ -25,13 +25,11 @@ var (
 )
 
 type apiOptions struct {
-	dryRun       bool
+	types.Options
 	kind         string
 	from         string
 	to           string
 	resourceName string
-	releaseName  string
-	revision     int
 }
 
 func newAPICmd(out io.Writer) *cobra.Command {
@@ -67,19 +65,21 @@ func newAPICmd(out io.Writer) *cobra.Command {
 func runAPI(cmd *cobra.Command, args []string) error {
 
 	apiOptions := apiOptions{
-		dryRun:       settings.dryRun,
+		Options: types.Options{
+			DryRun:      settings.dryRun,
+			ReleaseName: args[0],
+			Revision:    revision,
+		},
 		kind:         kind,
 		from:         from,
 		to:           to,
 		resourceName: name,
-		releaseName:  args[0],
-		revision:     revision,
 	}
 	return patchAPI(apiOptions)
 }
 
 func patchAPI(opts apiOptions) error {
-	if opts.dryRun {
+	if opts.DryRun {
 		log.Println("NOTE: This is in dry-run mode, the following actions will not be executed.")
 		log.Println("Run without --dry-run to take the actions described below:")
 		log.Println()
@@ -90,7 +90,7 @@ func patchAPI(opts apiOptions) error {
 		return err
 	}
 
-	releases, err := cfg.Releases.List(opts.filter)
+	releases, err := cfg.Releases.List(opts.Filter())
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func patchAPI(opts apiOptions) error {
 			return err
 		}
 
-		if i := info(opts, resource); i != nil {
+		if i := apiInfo(opts, resource); i != nil {
 			p, err := patchManifest(opts, resource, i)
 			if err != nil {
 				return err
@@ -123,7 +123,7 @@ func patchAPI(opts apiOptions) error {
 	}
 
 	if changed {
-		if !opts.dryRun {
+		if !opts.DryRun {
 			err = saveResource(manifests, rel, cfg)
 			if err != nil {
 				return err
@@ -160,7 +160,7 @@ func patchManifest(opts apiOptions, resource map[string]interface{}, r types.Res
 	return "", nil
 }
 
-func info(opts apiOptions, yaml map[string]interface{}) types.Resource {
+func apiInfo(opts apiOptions, yaml map[string]interface{}) types.Resource {
 	resource := types.ToResource(yaml)
 	if resource == nil {
 		return nil
@@ -182,15 +182,4 @@ func info(opts apiOptions, yaml map[string]interface{}) types.Resource {
 	}
 
 	return resource
-}
-
-func (opts *apiOptions) filter(rel *release.Release) bool {
-	if rel == nil || rel.Name == "" || rel.Name != opts.releaseName {
-		return false
-	}
-
-	if opts.revision > 0 {
-		return rel.Version == opts.revision
-	}
-	return true
 }
