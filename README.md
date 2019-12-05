@@ -25,5 +25,13 @@ This command allows to adopt / import existing resources into a new chart.
 One of the key benefits is, that existing deployments can be seamlessly re-used within a new chart.
 
 ```console
-helm patch adopt <release-name> <chart> --names resource-type/resource-name
+helm patch adopt <release-name> <chart> --kind resource-kind --name resource-name
+```
+
+## Remove a resources from a new chart
+
+This command allows to remove a resource from a chart.
+
+```console
+helm patch rm <chart> --kind resource-kind --name resource-name
 ```

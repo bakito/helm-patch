@@ -1,6 +1,7 @@
 package types
 
 import (
+	"helm.sh/helm/v3/pkg/release"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -61,4 +62,24 @@ func (r *resourceImpl) Name() string {
 // KindName get the kind name of the resource
 func (r *resourceImpl) KindName() string {
 	return r.Kind() + "/" + r.Name()
+}
+
+// Options basic options
+type Options struct {
+	DryRun      bool
+	ReleaseName string
+	Revision    int
+}
+
+func (o Options) Filter() func(rel *release.Release) bool {
+	return func(rel *release.Release) bool {
+		if rel == nil || rel.Name == "" || rel.Name != o.ReleaseName {
+			return false
+		}
+
+		if o.Revision > 0 {
+			return rel.Version == o.Revision
+		}
+		return true
+	}
 }

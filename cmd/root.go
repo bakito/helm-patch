@@ -35,6 +35,7 @@ func NewRootCmd(out io.Writer, args []string) *cobra.Command {
 	cmd.AddCommand(
 		newAPICmd(out),
 		newAdoptCmd(out),
+		newRmCmd(out),
 	)
 
 	return cmd

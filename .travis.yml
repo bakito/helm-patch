@@ -16,6 +16,6 @@ before_script:
   - export PATH=$PATH:/$(pwd)/bin
 
 script:
-  - go build
   - go test ./... -cover
+  - go build
   - goreleaser --snapshot --skip-publish

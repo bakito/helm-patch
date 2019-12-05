@@ -9,26 +9,16 @@ import (
 	"strings"
 
 	"github.com/bakito/helm-patch/pkg/types"
+	"github.com/bakito/helm-patch/pkg/util"
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/release"
-	"helm.sh/helm/v3/pkg/releaseutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/resource"
 	"sigs.k8s.io/yaml"
 )
-
-var (
-	resourceNames []string
-)
-
-type adoptOptions struct {
-	dryRun        bool
-	resourceNames []string
-	args          []string
-}
 
 func newAdoptCmd(out io.Writer) *cobra.Command {
 	cmd := &cobra.Command{
@@ -47,9 +37,11 @@ func newAdoptCmd(out io.Writer) *cobra.Command {
 	flags := cmd.Flags()
 	settings.AddFlags(flags)
 
-	flags.StringArrayVar(&resourceNames, "names", []string{}, "the names of the recources to adopt")
+	flags.StringArrayVarP(&names, "name", "n", []string{}, "the name(s) of the recources to adopt")
+	flags.StringArrayVarP(&kinds, "kind", "k", []string{}, "the kind(s) of the recources to adopt")
 
-	cmd.MarkFlagRequired("names")
+	cmd.MarkFlagRequired("name")
+	cmd.MarkFlagRequired("kind")
 
 	return cmd
 
@@ -57,19 +49,28 @@ func newAdoptCmd(out io.Writer) *cobra.Command {
 
 func runAdopt(cmd *cobra.Command, args []string) error {
 
-	adoptOptions := adoptOptions{
-		dryRun:        settings.dryRun,
-		resourceNames: resourceNames,
-		args:          args,
+	if len(names) != len(kinds) {
+		return errors.New("The number of name args %d and kind args %d do not match")
 	}
-	return adopt(adoptOptions)
+
+	opts := resourceNameOptions{
+		Options: types.Options{
+			DryRun:      settings.dryRun,
+			ReleaseName: args[0],
+		},
+		names: names,
+		kinds: kinds,
+	}
+	return adopt(opts)
 }
 
-func adopt(opts adoptOptions) error {
-	if opts.dryRun {
+func adopt(opts resourceNameOptions) error {
+	dr := ""
+	if opts.DryRun {
 		log.Println("NOTE: This is in dry-run mode, the following actions will not be executed.")
 		log.Println("Run without --dry-run to take the actions described below:")
 		log.Println()
+		dr = "DRY-RUN "
 	}
 
 	cfg, err := settings.cfg()
@@ -78,7 +79,7 @@ func adopt(opts adoptOptions) error {
 	}
 	install := action.NewInstall(cfg)
 
-	name, chartName, err := install.NameAndChart(opts.args)
+	name, chartName, err := install.NameAndChart([]string{opts.ReleaseName})
 	if err != nil {
 		return err
 	}
@@ -120,7 +121,7 @@ func adopt(opts adoptOptions) error {
 	}
 
 	for _, res := range results {
-		manifests := releaseutil.SplitManifests(res.Manifest)
+		manifests := util.SplitManifests(res.Manifest)
 
 		for _, data := range manifests {
 			resYaml := make(map[string]interface{})
@@ -134,14 +135,14 @@ func adopt(opts adoptOptions) error {
 			}
 
 			if _, ok := resourceNames[resource.KindName()]; ok {
-				return fmt.Errorf("The resource '%s' is already contained within the chart: '%s-%s', name: '%s', version: %v",
-					resource.KindName(), res.Chart.Name(), res.Chart.Metadata.Version, res.Name, res.Version)
+				return fmt.Errorf("%sThe resource '%s' is already contained within the chart: '%s-%s', name: '%s', version: %v",
+					dr, resource.KindName(), res.Chart.Name(), res.Chart.Metadata.Version, res.Name, res.Version)
 			}
 		}
 	}
 
-	if opts.dryRun {
-		log.Printf("%s\n", manifest)
+	if opts.DryRun {
+		log.Printf("%s%s\n", dr, manifest)
 	} else {
 		rel.Manifest = manifest
 		rel.SetStatus(release.StatusDeployed, "Adoption complete")
@@ -151,12 +152,13 @@ func adopt(opts adoptOptions) error {
 	return nil
 }
 
-func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, map[string]bool, error) {
+func buildManifest(opts resourceNameOptions, cfg *action.Configuration) (string, map[string]bool, error) {
 	b := bytes.NewBuffer(nil)
 
 	resourceNames := make(map[string]bool)
 
-	for _, name := range opts.resourceNames {
+	for i, name := range opts.names {
+		resName := fmt.Sprintf("%s/%s", opts.kinds[i], name)
 
 		builder := resource.NewBuilder(cfg.RESTClientGetter)
 
@@ -164,7 +166,7 @@ func buildManifest(opts adoptOptions, cfg *action.Configuration) (string, map[st
 			Unstructured().
 			NamespaceParam(settings.Namespace()).
 			ExportParam(true).
-			ResourceTypeOrNameArgs(true, name).
+			ResourceTypeOrNameArgs(true, resName).
 			Do()
 		if result.Err() != nil {
 			return "", resourceNames, result.Err()
