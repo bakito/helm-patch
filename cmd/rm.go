@@ -30,23 +30,28 @@ func newRmCmd(out io.Writer) *cobra.Command {
 	flags := cmd.Flags()
 	settings.AddFlags(flags)
 
-	flags.StringArrayVar(&resourceNames, "name", []string{}, "the name(s) of the recources to remove")
+	flags.StringArrayVarP(&names, "name", "n", []string{}, "the name(s) of the recources to remove")
+	flags.StringArrayVarP(&kinds, "kind", "k", []string{}, "the kind(s) of the recources to remove")
 
 	cmd.MarkFlagRequired("name")
+	cmd.MarkFlagRequired("kind")
 
 	return cmd
 
 }
 
 func runRm(cmd *cobra.Command, args []string) error {
+	if len(names) != len(kinds) {
+		return errors.New("The number of name args %d and kind args %d do not match")
+	}
 
 	opts := resourceNameOptions{Options: types.Options{
 		DryRun:      settings.dryRun,
 		ReleaseName: args[0],
 		Revision:    revision,
 	},
-		resourceNames: resourceNames,
-		args:          args,
+		names: names,
+		kinds: kinds,
 	}
 	return remove(opts)
 }
@@ -79,16 +84,16 @@ func remove(opts resourceNameOptions) error {
 	changed := false
 	manifests := releaseutil.SplitManifests(rel.Manifest)
 
-	for name, data := range manifests {
+	for manifestNamew, data := range manifests {
 		resource := make(map[string]interface{})
 		if err := yaml.Unmarshal([]byte(data), &resource); err != nil {
 			return err
 		}
 
 		res := types.ToResource(resource)
-		for _, rn := range opts.resourceNames {
-			if strings.ToLower(rn) == strings.ToLower(res.KindName()) {
-				delete(manifests, name)
+		for i, name := range opts.names {
+			if strings.ToLower(name) == strings.ToLower(res.Name()) && strings.ToLower(opts.kinds[i]) == strings.ToLower(res.Kind()) {
+				delete(manifests, manifestNamew)
 				log.Printf("Remove resource '%s' from chart \n", res.KindName())
 				changed = true
 			}

@@ -20,16 +20,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var (
-	resourceNames []string
-)
-
-type resourceNameOptions struct {
-	types.Options
-	resourceNames []string
-	args          []string
-}
-
 func newAdoptCmd(out io.Writer) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "adopt [flags] [RELEASE] [CHART]",
@@ -47,9 +37,11 @@ func newAdoptCmd(out io.Writer) *cobra.Command {
 	flags := cmd.Flags()
 	settings.AddFlags(flags)
 
-	flags.StringArrayVar(&resourceNames, "name", []string{}, "the name(s) of the recources to adopt")
+	flags.StringArrayVarP(&names, "name", "n", []string{}, "the name(s) of the recources to adopt")
+	flags.StringArrayVarP(&kinds, "kind", "k", []string{}, "the kind(s) of the recources to adopt")
 
 	cmd.MarkFlagRequired("name")
+	cmd.MarkFlagRequired("kind")
 
 	return cmd
 
@@ -57,12 +49,17 @@ func newAdoptCmd(out io.Writer) *cobra.Command {
 
 func runAdopt(cmd *cobra.Command, args []string) error {
 
+	if len(names) != len(kinds) {
+		return errors.New("The number of name args %d and kind args %d do not match")
+	}
+
 	opts := resourceNameOptions{
 		Options: types.Options{
 			DryRun:      settings.dryRun,
 			ReleaseName: args[0],
 		},
-		resourceNames: resourceNames,
+		names: names,
+		kinds: kinds,
 	}
 	return adopt(opts)
 }
@@ -158,7 +155,8 @@ func buildManifest(opts resourceNameOptions, cfg *action.Configuration) (string,
 
 	resourceNames := make(map[string]bool)
 
-	for _, name := range opts.resourceNames {
+	for i, name := range opts.names {
+		resName := fmt.Sprintf("%s/%s", opts.kinds[i], name)
 
 		builder := resource.NewBuilder(cfg.RESTClientGetter)
 
@@ -166,7 +164,7 @@ func buildManifest(opts resourceNameOptions, cfg *action.Configuration) (string,
 			Unstructured().
 			NamespaceParam(settings.Namespace()).
 			ExportParam(true).
-			ResourceTypeOrNameArgs(true, name).
+			ResourceTypeOrNameArgs(true, resName).
 			Do()
 		if result.Err() != nil {
 			return "", resourceNames, result.Err()

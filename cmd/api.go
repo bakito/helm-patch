@@ -16,22 +16,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var (
-	kind     string
-	from     string
-	to       string
-	name     string
-	revision int
-)
-
-type apiOptions struct {
-	types.Options
-	kind         string
-	from         string
-	to           string
-	resourceName string
-}
-
 func newAPICmd(out io.Writer) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api [flags] RELEASE",
@@ -49,10 +33,10 @@ func newAPICmd(out io.Writer) *cobra.Command {
 	flags := cmd.Flags()
 	settings.AddFlags(flags)
 
-	flags.StringVar(&kind, "kind", "", "the kind to patch the api version")
+	flags.StringVarP(&kind, "kind", "k", "", "the kind to patch the api version")
 	flags.StringVar(&from, "from", "", "the api version that has to be replaced")
 	flags.StringVar(&to, "to", "", "the api version to be set")
-	flags.StringVar(&name, "name", "", "the name of the resource")
+	flags.StringVarP(&name, "name", "n", "", "the name of the resource")
 	flags.IntVar(&revision, "revision", -1, "the revision of the release to path")
 
 	cmd.MarkFlagRequired("kind")
