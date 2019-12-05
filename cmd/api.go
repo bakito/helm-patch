@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/bakito/helm-patch/pkg/types"
+	"github.com/bakito/helm-patch/pkg/util"
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/release"
-	"helm.sh/helm/v3/pkg/releaseutil"
 	"sigs.k8s.io/yaml"
 )
 
@@ -63,10 +63,12 @@ func runAPI(cmd *cobra.Command, args []string) error {
 }
 
 func patchAPI(opts apiOptions) error {
+	dr := ""
 	if opts.DryRun {
 		log.Println("NOTE: This is in dry-run mode, the following actions will not be executed.")
 		log.Println("Run without --dry-run to take the actions described below:")
 		log.Println()
+		dr = "DRY-RUN "
 	}
 
 	cfg, err := settings.cfg()
@@ -84,10 +86,10 @@ func patchAPI(opts apiOptions) error {
 		rel = releases[len(releases)-1]
 	}
 
-	log.Printf("Processing release: '%s' with revision: %v\n", rel.Name, rel.Version)
+	log.Printf("%sProcessing release: '%s' with revision: %v\n", dr, rel.Name, rel.Version)
 
 	changed := false
-	manifests := releaseutil.SplitManifests(rel.Manifest)
+	manifests := util.SplitManifests(rel.Manifest)
 
 	for name, data := range manifests {
 		resource := make(map[string]interface{})
@@ -113,10 +115,10 @@ func patchAPI(opts apiOptions) error {
 				return err
 			}
 		}
-		log.Printf("Release: '%s' with revision: %v patched successfully\n", rel.Name, rel.Version)
+		log.Printf("%sRelease: '%s' with revision: %v patched successfully\n", dr, rel.Name, rel.Version)
 
 	} else {
-		log.Print("Nothing to patch")
+		log.Printf("%sNothing to patch\n", dr)
 	}
 	return nil
 }

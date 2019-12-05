@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	"github.com/bakito/helm-patch/pkg/types"
+	"github.com/bakito/helm-patch/pkg/util"
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/release"
-	"helm.sh/helm/v3/pkg/releaseutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/resource"
@@ -65,10 +65,12 @@ func runAdopt(cmd *cobra.Command, args []string) error {
 }
 
 func adopt(opts resourceNameOptions) error {
+	dr := ""
 	if opts.DryRun {
 		log.Println("NOTE: This is in dry-run mode, the following actions will not be executed.")
 		log.Println("Run without --dry-run to take the actions described below:")
 		log.Println()
+		dr = "DRY-RUN "
 	}
 
 	cfg, err := settings.cfg()
@@ -119,7 +121,7 @@ func adopt(opts resourceNameOptions) error {
 	}
 
 	for _, res := range results {
-		manifests := releaseutil.SplitManifests(res.Manifest)
+		manifests := util.SplitManifests(res.Manifest)
 
 		for _, data := range manifests {
 			resYaml := make(map[string]interface{})
@@ -133,14 +135,14 @@ func adopt(opts resourceNameOptions) error {
 			}
 
 			if _, ok := resourceNames[resource.KindName()]; ok {
-				return fmt.Errorf("The resource '%s' is already contained within the chart: '%s-%s', name: '%s', version: %v",
-					resource.KindName(), res.Chart.Name(), res.Chart.Metadata.Version, res.Name, res.Version)
+				return fmt.Errorf("%sThe resource '%s' is already contained within the chart: '%s-%s', name: '%s', version: %v",
+					dr, resource.KindName(), res.Chart.Name(), res.Chart.Metadata.Version, res.Name, res.Version)
 			}
 		}
 	}
 
 	if opts.DryRun {
-		log.Printf("%s\n", manifest)
+		log.Printf("%s%s\n", dr, manifest)
 	} else {
 		rel.Manifest = manifest
 		rel.SetStatus(release.StatusDeployed, "Adoption complete")

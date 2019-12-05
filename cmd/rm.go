@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/bakito/helm-patch/pkg/types"
+	"github.com/bakito/helm-patch/pkg/util"
 	"github.com/spf13/cobra"
 	"helm.sh/helm/v3/pkg/release"
-	"helm.sh/helm/v3/pkg/releaseutil"
 	"sigs.k8s.io/yaml"
 )
 
@@ -57,10 +57,12 @@ func runRm(cmd *cobra.Command, args []string) error {
 }
 
 func remove(opts resourceNameOptions) error {
+	dr := ""
 	if opts.DryRun {
 		log.Println("NOTE: This is in dry-run mode, the following actions will not be executed.")
 		log.Println("Run without --dry-run to take the actions described below:")
 		log.Println()
+		dr = "DRY-RUN "
 	}
 
 	cfg, err := settings.cfg()
@@ -79,10 +81,10 @@ func remove(opts resourceNameOptions) error {
 		rel = releases[len(releases)-1]
 	}
 
-	log.Printf("Processing release: '%s' with revision: %v\n", rel.Name, rel.Version)
+	log.Printf("%sProcessing release: '%s' with revision: %v\n", dr, rel.Name, rel.Version)
 
 	changed := false
-	manifests := releaseutil.SplitManifests(rel.Manifest)
+	manifests := util.SplitManifests(rel.Manifest)
 
 	for manifestNamew, data := range manifests {
 		resource := make(map[string]interface{})
@@ -94,7 +96,7 @@ func remove(opts resourceNameOptions) error {
 		for i, name := range opts.names {
 			if strings.ToLower(name) == strings.ToLower(res.Name()) && strings.ToLower(opts.kinds[i]) == strings.ToLower(res.Kind()) {
 				delete(manifests, manifestNamew)
-				log.Printf("Remove resource '%s' from chart \n", res.KindName())
+				log.Printf("%sRemove resource '%s' from chart \n", dr, res.KindName())
 				changed = true
 			}
 		}
@@ -107,10 +109,10 @@ func remove(opts resourceNameOptions) error {
 				return err
 			}
 		}
-		log.Printf("Release: '%s' with revision: %v patched successfully\n", rel.Name, rel.Version)
+		log.Printf("%sRelease: '%s' with revision: %v patched successfully\n", dr, rel.Name, rel.Version)
 
 	} else {
-		log.Print("Nothing to patch")
+		log.Printf("%sResources not found\n", dr)
 	}
 	return nil
 }
