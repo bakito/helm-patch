@@ -2,6 +2,7 @@
 [![Build Status](https://travis-ci.com/bakito/helm-patch.svg?branch=master)](https://travis-ci.com/bakito/helm-patch)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bakito/helm-patch)](https://goreportcard.com/report/github.com/bakito/helm-patch)
 [![GitHub Release](https://img.shields.io/github/release/bakito/helm-patch.svg?style=flat)](https://github.com/bakito/helm-patch/releases)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fbakito%2Fhelm-patch.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fbakito%2Fhelm-patch?ref=badge_shield)
 
 # Helm Patch Plugin
 
@@ -35,3 +36,6 @@ This command allows to remove a resource from a chart.
 ```console
 helm patch rm <chart> --kind resource-kind --name resource-name
 ```
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fbakito%2Fhelm-patch.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fbakito%2Fhelm-patch?ref=badge_large)
