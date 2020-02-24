@@ -60,6 +60,7 @@ func runAdopt(cmd *cobra.Command, args []string) error {
 		},
 		names: names,
 		kinds: kinds,
+		chart: args[1],
 	}
 	return adopt(opts)
 }
@@ -79,7 +80,7 @@ func adopt(opts resourceNameOptions) error {
 	}
 	install := action.NewInstall(cfg)
 
-	name, chartName, err := install.NameAndChart([]string{opts.ReleaseName})
+	name, chartName, err := install.NameAndChart([]string{opts.ReleaseName, opts.chart})
 	if err != nil {
 		return err
 	}

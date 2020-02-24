@@ -18,6 +18,7 @@ type resourceNameOptions struct {
 	types.Options
 	names []string
 	kinds []string
+	chart string
 }
 
 type apiOptions struct {
