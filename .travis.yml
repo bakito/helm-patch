@@ -11,7 +11,7 @@ env:
   - GO111MODULE=on
 
 before_script:
-  - apt-get -y -q install upx
+  - sudo apt-get -y -q install upx
   - curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
   - export PATH=$PATH:/$(pwd)/bin
 
