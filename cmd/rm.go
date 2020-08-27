@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"errors"
-	"io"
 	"log"
 	"strings"
 
@@ -13,7 +12,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func newRmCmd(out io.Writer) *cobra.Command {
+func newRmCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "rm [flags] RELEASE",
 		Short: "remove existing resources from a chart",
@@ -33,16 +32,16 @@ func newRmCmd(out io.Writer) *cobra.Command {
 	flags.StringArrayVarP(&names, "name", "n", []string{}, "the name(s) of the recources to remove")
 	flags.StringArrayVarP(&kinds, "kind", "k", []string{}, "the kind(s) of the recources to remove")
 
-	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("kind")
+	_ = cmd.MarkFlagRequired("name")
+	_ = cmd.MarkFlagRequired("kind")
 
 	return cmd
 
 }
 
-func runRm(cmd *cobra.Command, args []string) error {
+func runRm(_ *cobra.Command, args []string) error {
 	if len(names) != len(kinds) {
-		return errors.New("The number of name args %d and kind args %d do not match")
+		return errors.New("the number of name args %d and kind args %d do not match")
 	}
 
 	opts := resourceNameOptions{Options: types.Options{
@@ -79,6 +78,9 @@ func remove(opts resourceNameOptions) error {
 	var rel *release.Release
 	if len(releases) > 0 {
 		rel = releases[len(releases)-1]
+	} else {
+		log.Printf("No release found\n")
+		return nil
 	}
 
 	log.Printf("%sProcessing release: '%s' with revision: %v\n", dr, rel.Name, rel.Version)

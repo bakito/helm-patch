@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	migrateCmd := cmd.NewRootCmd(os.Stdout, os.Args[1:])
+	migrateCmd := cmd.NewRootCmd(os.Args[1:])
 
 	if err := migrateCmd.Execute(); err != nil {
 		os.Exit(1)

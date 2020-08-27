@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"strings"
 
@@ -20,7 +19,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func newAdoptCmd(out io.Writer) *cobra.Command {
+func newAdoptCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "adopt [flags] [RELEASE] [CHART]",
 		Short: "adopt existing resources into a chart",
@@ -40,17 +39,17 @@ func newAdoptCmd(out io.Writer) *cobra.Command {
 	flags.StringArrayVarP(&names, "name", "n", []string{}, "the name(s) of the recources to adopt")
 	flags.StringArrayVarP(&kinds, "kind", "k", []string{}, "the kind(s) of the recources to adopt")
 
-	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("kind")
+	_ = cmd.MarkFlagRequired("name")
+	_ = cmd.MarkFlagRequired("kind")
 
 	return cmd
 
 }
 
-func runAdopt(cmd *cobra.Command, args []string) error {
+func runAdopt(_ *cobra.Command, args []string) error {
 
 	if len(names) != len(kinds) {
-		return errors.New("The number of name args %d and kind args %d do not match")
+		return errors.New("the number of name args %d and kind args %d do not match")
 	}
 
 	opts := resourceNameOptions{
@@ -121,8 +120,8 @@ func adopt(opts resourceNameOptions) error {
 		return err
 	}
 
-	for _, res := range results {
-		manifests := util.SplitManifests(res.Manifest)
+	for _, result := range results {
+		manifests := util.SplitManifests(result.Manifest)
 
 		for _, data := range manifests {
 			resYaml := make(map[string]interface{})
@@ -130,14 +129,14 @@ func adopt(opts resourceNameOptions) error {
 				return err
 			}
 
-			resource := types.ToResource(resYaml)
-			if resource == nil {
+			res := types.ToResource(resYaml)
+			if res == nil {
 				return nil
 			}
 
-			if _, ok := resourceNames[resource.KindName()]; ok {
+			if _, ok := resourceNames[res.KindName()]; ok {
 				return fmt.Errorf("%sThe resource '%s' is already contained within the chart: '%s-%s', name: '%s', version: %v",
-					dr, resource.KindName(), res.Chart.Name(), res.Chart.Metadata.Version, res.Name, res.Version)
+					dr, res.KindName(), result.Chart.Name(), result.Chart.Metadata.Version, result.Name, result.Version)
 			}
 		}
 	}
@@ -147,7 +146,7 @@ func adopt(opts resourceNameOptions) error {
 	} else {
 		rel.Manifest = manifest
 		rel.SetStatus(release.StatusDeployed, "Adoption complete")
-		cfg.Releases.Create(rel)
+		_ = cfg.Releases.Create(rel)
 	}
 
 	return nil
@@ -193,7 +192,7 @@ func buildManifest(opts resourceNameOptions, cfg *action.Configuration) (string,
 				resourceNames[object.GetObjectKind().GroupVersionKind().Kind+"/"+meta.GetName()] = true
 			}
 
-			fmt.Fprintf(b, "---\n# Exported form: %s\n%s\n", src, content)
+			_, _ = fmt.Fprintf(b, "---\n# Exported form: %s\n%s\n", src, content)
 		}
 	}
 

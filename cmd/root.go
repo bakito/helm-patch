@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"errors"
-	"io"
-
 	"github.com/spf13/cobra"
 )
 
@@ -13,7 +11,7 @@ var (
 )
 
 // NewRootCmd create a new root command
-func NewRootCmd(out io.Writer, args []string) *cobra.Command {
+func NewRootCmd(args []string) *cobra.Command {
 	cmd := &cobra.Command{
 		Version:      version,
 		Use:          "patch",
@@ -29,13 +27,13 @@ func NewRootCmd(out io.Writer, args []string) *cobra.Command {
 	}
 
 	flags := cmd.PersistentFlags()
-	flags.Parse(args)
+	_ = flags.Parse(args)
 	settings = newEnvSettings()
 
 	cmd.AddCommand(
-		newAPICmd(out),
-		newAdoptCmd(out),
-		newRmCmd(out),
+		newAPICmd(),
+		newAdoptCmd(),
+		newRmCmd(),
 	)
 
 	return cmd

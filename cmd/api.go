@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"strings"
 
@@ -16,7 +15,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func newAPICmd(out io.Writer) *cobra.Command {
+func newAPICmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "api [flags] RELEASE",
 		Short: "path the api version of a resource",
@@ -39,14 +38,14 @@ func newAPICmd(out io.Writer) *cobra.Command {
 	flags.StringVarP(&name, "name", "n", "", "the name of the resource")
 	flags.IntVar(&revision, "revision", -1, "the revision of the release to path")
 
-	cmd.MarkFlagRequired("kind")
-	cmd.MarkFlagRequired("to")
+	_ = cmd.MarkFlagRequired("kind")
+	_ = cmd.MarkFlagRequired("to")
 
 	return cmd
 
 }
 
-func runAPI(cmd *cobra.Command, args []string) error {
+func runAPI(_ *cobra.Command, args []string) error {
 
 	apiOptions := apiOptions{
 		Options: types.Options{
@@ -84,8 +83,10 @@ func patchAPI(opts apiOptions) error {
 	var rel *release.Release
 	if len(releases) > 0 {
 		rel = releases[len(releases)-1]
+	} else {
+		log.Printf("No release found\n")
+		return nil
 	}
-
 	log.Printf("%sProcessing release: '%s' with revision: %v\n", dr, rel.Name, rel.Version)
 
 	changed := false
@@ -129,7 +130,7 @@ func saveResource(manifests map[string]string, rel *release.Release, cfg *action
 		if strings.TrimSpace(content) == "" {
 			continue
 		}
-		fmt.Fprintf(b, "---\n# Source: %s\n%s\n", name, content)
+		_, _ = fmt.Fprintf(b, "---\n# Source: %s\n%s\n", name, content)
 	}
 	rel.Manifest = b.String()
 	return cfg.Releases.Update(rel)
