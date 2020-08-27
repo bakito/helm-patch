@@ -4,3 +4,4 @@ helm-patch*
 coverage.out
 bin
 dist
+.idea
