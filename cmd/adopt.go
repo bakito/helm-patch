@@ -165,7 +165,6 @@ func buildManifest(opts resourceNameOptions, cfg *action.Configuration) (string,
 		result := builder.
 			Unstructured().
 			NamespaceParam(settings.Namespace()).
-			ExportParam(true).
 			ResourceTypeOrNameArgs(true, resName).
 			Do()
 		if result.Err() != nil {
