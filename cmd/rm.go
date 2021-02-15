@@ -96,7 +96,7 @@ func remove(opts resourceNameOptions) error {
 
 		res := types.ToResource(resource)
 		for i, name := range opts.names {
-			if strings.ToLower(name) == strings.ToLower(res.Name()) && strings.ToLower(opts.kinds[i]) == strings.ToLower(res.Kind()) {
+			if strings.EqualFold(name, res.Name()) && strings.EqualFold(opts.kinds[i], strings.ToLower(res.Kind())) {
 				delete(manifests, manifestNamew)
 				log.Printf("%sRemove resource '%s' from chart \n", dr, res.KindName())
 				changed = true
