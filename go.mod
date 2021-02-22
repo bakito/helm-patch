@@ -8,7 +8,7 @@ require (
 	gotest.tools v2.2.0+incompatible
 	helm.sh/helm/v3 v3.5.1
 	k8s.io/apimachinery v0.20.4
-	k8s.io/cli-runtime v0.20.1
+	k8s.io/cli-runtime v0.20.4
 	rsc.io/letsencrypt v0.0.3 // indirect
 	sigs.k8s.io/yaml v1.2.0
 )
