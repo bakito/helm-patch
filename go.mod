@@ -3,7 +3,7 @@ module github.com/bakito/helm-patch
 go 1.18
 
 require (
-	github.com/spf13/cobra v1.4.0
+	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
 	gotest.tools v2.2.0+incompatible
 	helm.sh/helm/v3 v3.9.0
