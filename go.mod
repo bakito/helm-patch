@@ -6,7 +6,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	gotest.tools v2.2.0+incompatible
-	helm.sh/helm/v3 v3.13.1
+	helm.sh/helm/v3 v3.13.2
 	k8s.io/apimachinery v0.28.3
 	k8s.io/cli-runtime v0.28.3
 	sigs.k8s.io/yaml v1.4.0
