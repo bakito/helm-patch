@@ -1,7 +1,6 @@
 module github.com/bakito/helm-patch
 
-go 1.21
-toolchain go1.22.2
+go 1.22.2
 
 require (
 	github.com/spf13/cobra v1.8.0
